@@ -23,9 +23,11 @@ namespace sqldsml{
 
     template <typename parameter_key_fields_container_t>
     feature_cache(sqlite::database::type_ptr db,
+                  const std::string& table_name,
                   const std::string& parameters_table_name,
                   const parameter_key_fields_container_t& parameter_key_fields) :
       db_(db),
+      table_name_(table_name),
       parameters_table_name_(parameters_table_name),
       parameter_key_fields_(parameter_key_fields.begin(), parameter_key_fields.end()) {
     }
@@ -33,6 +35,7 @@ namespace sqldsml{
     feature_cache(const type& other) :
       all_features_(other.all_features_),
       db_(other.db_),
+      table_name_(other.table_name_),
       parameters_table_name_(other.parameters_table_name_),
       parameter_key_fields_(other.parameter_key_fields_) {
     }
@@ -40,13 +43,15 @@ namespace sqldsml{
     feature_cache(type&& other) :
       all_features_(std::move(other.all_features_)),
       db_(std::move(other.db_)),
+      table_name_(std::move(other.table_name_)),
       parameters_table_name_(std::move(other.parameters_table_name_)),
-      parameter_key_fields_(other.parameter_key_fields_) {
+      parameter_key_fields_(std::move(other.parameter_key_fields_)) {
     }
 
     void swap(type& other) {
       std::swap(all_features_, other.all_features_);
       std::swap(db_, other.db_);
+      std::swap(table_name_, other.table_name_);
       std::swap(parameters_table_name_, other.parameters_table_name_);
       std::swap(parameter_key_fields_, other.parameter_key_fields_);
     }
@@ -88,7 +93,7 @@ namespace sqldsml{
     feature_type_ptr find_by_parameters_id(const int64_t parameters_id) const {
       auto found = std::find_if(all_features_.begin(),
 				all_features_.end(), [parameters_id](const feature_type_ptr& f) {
-                                  return parameters_id == f->parameters_id_;
+                                  return parameters_id == f->parameters_id();
                                 });
       if (found != all_features_.end()) {
         return *found;
@@ -163,9 +168,52 @@ namespace sqldsml{
       insert.flush();
     }
 
+    void load_ids() {
+      const parameters_type dummy;
+      typedef std::tuple<int64_t, int64_t> select_record_type;
+      typedef sqlite::buffered::input_query_by_keys_base<
+        select_record_type,
+        parameters_type,
+        sqlite::default_value_access_policy> select_query_type;
+
+      std::string query_prefix_str = "SELECT `id`, `parameters_id` ";
+      query_prefix_str += " FROM `" + table_name_ + "` WHERE ";
+
+      const std::vector<std::string> feature_search_fields{"parameters_id"};
+      select_query_type select(db_, query_prefix_str, feature_search_fields);
+      for (auto &f : all_features_) {
+        if ((f->id() == 0) && (f->parameters_id() != 0)) {
+          select.add_key(std::tuple<int64_t>(f->parameters_id()));
+          SQLDSML_HPP_LOG(std::string("feature_cache::load_ids add key ") + std::to_string(f->parameters_id()));
+        }
+      }
+      for (auto r : select) {
+        auto found = find_by_parameters_id(std::get<1>(r));
+        if (found != nullptr) {
+          SQLDSML_HPP_LOG(std::string("feature_cache::load_ids got requested record"));
+          found->id() = std::get<0>(r);
+        } else {
+          SQLDSML_HPP_LOG(std::string("feature_cache::load_ids error - got not requested record"));
+        }
+      }
+    }
+
+    void create_ids() {
+      typedef ::sqlite::buffered::insert_query_base<std::tuple<int64_t>,
+                                                    ::sqlite::default_value_access_policy> insert_type;
+      insert_type insert(db_, table_name_, std::vector<std::string>{"parameters_id"});
+      for (auto &f : all_features_) {
+        if ((f->id() == 0) && (f->parameters_id() != 0)) {
+          insert.push_back(std::tuple<int64_t>(f->parameters_id()));
+        }
+      }
+      insert.flush();
+    }
+
   private:
     std::set<feature_type_ptr> all_features_;
     sqlite::database::type_ptr db_;
+    std::string table_name_;
     std::string parameters_table_name_;
     std::vector<std::string> parameter_key_fields_;
   };

@@ -45,6 +45,7 @@ namespace sqldsml {
       return *this;
     }
 
+  public:
     int64_t& id() {
       return id_;
     }
