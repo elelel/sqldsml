@@ -1,0 +1,175 @@
+#pragma once
+
+#include <algorithm>
+#include <memory>
+
+#include <sqlite_buffered>
+
+#include "logging.hpp"
+
+namespace sqldsml{
+  template <typename feature_t>
+  class feature_cache;
+  
+  template <typename feature_t>
+  class feature_cache {
+  public:
+    typedef feature_t feature_type;
+    typedef feature_cache<feature_type> type;
+    typedef typename feature_type::type_ptr feature_type_ptr;
+    typedef typename feature_type::parameters_type parameters_type;
+    typedef typename feature_type::parameters_type_ptr parameters_type_ptr;
+    typedef std::set<feature_type_ptr> feature_container_type;
+
+    template <typename parameter_key_fields_container_t>
+    feature_cache(sqlite::database::type_ptr db,
+                  const std::string& parameters_table_name,
+                  const parameter_key_fields_container_t& parameter_key_fields) :
+      db_(db),
+      parameters_table_name_(parameters_table_name),
+      parameter_key_fields_(parameter_key_fields.begin(), parameter_key_fields.end()) {
+    }
+
+    feature_cache(const type& other) :
+      all_features_(other.all_features_),
+      db_(other.db_),
+      parameters_table_name_(other.parameters_table_name_),
+      parameter_key_fields_(other.parameter_key_fields_) {
+    }
+
+    feature_cache(type&& other) :
+      all_features_(std::move(other.all_features_)),
+      db_(std::move(other.db_)),
+      parameters_table_name_(std::move(other.parameters_table_name_)),
+      parameter_key_fields_(other.parameter_key_fields_) {
+    }
+
+    void swap(type& other) {
+      std::swap(all_features_, other.all_features_);
+      std::swap(db_, other.db_);
+      std::swap(parameters_table_name_, other.parameters_table_name_);
+      std::swap(parameter_key_fields_, other.parameter_key_fields_);
+    }
+
+    type& operator=(const type& other) {
+      type tmp(other);
+      swap(tmp);
+      return *this;
+    }
+
+    ~feature_cache() {
+      SQLDSML_HPP_LOG("feature_cache::~feature_cache");
+    }
+
+    feature_type_ptr find_by_parameters(const parameters_type_ptr parameters_ptr) const {
+      auto found = std::find_if(all_features_.begin(),
+				all_features_.end(), [&parameters_ptr](const feature_type_ptr& f) {
+                                  return parameters_ptr == f->parameters();
+                                });
+      if (found != all_features_.end()) {
+        return *found;
+      } else {
+        return nullptr;
+      }
+    }
+
+    feature_type_ptr find_by_parameters(const parameters_type& parameters) const {
+      auto found = std::find_if(all_features_.begin(),
+				all_features_.end(), [&parameters](const feature_type_ptr& f) {
+                                  return parameters == *(f->parameters());
+                                });
+      if (found != all_features_.end()) {
+        return *found;
+      } else {
+        return nullptr;
+      }
+    }
+
+    feature_type_ptr find_by_parameters_id(const int64_t parameters_id) const {
+      auto found = std::find_if(all_features_.begin(),
+				all_features_.end(), [parameters_id](const feature_type_ptr& f) {
+                                  return parameters_id == f->parameters_id_;
+                                });
+      if (found != all_features_.end()) {
+        return *found;
+      } else {
+        return nullptr;
+      }
+    }
+
+    feature_type_ptr add(const feature_type& feature) {
+      auto found = find_by_parameters(feature.parameters());
+      if (found == nullptr) {
+        SQLDSML_HPP_LOG("add not found");
+        feature_type_ptr f(new feature_type(feature));
+        all_features_.insert(f);
+        return f;
+      } else {
+        SQLDSML_HPP_LOG("add found");
+        return found;
+      }
+    }
+
+    typename feature_container_type::iterator begin() {
+      return all_features().begin();
+    }
+
+    typename feature_container_type::iterator end() {
+      return all_features().end();
+    }
+
+    feature_container_type& all_features() {
+      return all_features_;
+    }
+
+
+    void load_parameter_ids() {
+      const parameters_type dummy;
+      typedef decltype(std::tuple_cat(std::tuple<int64_t>(0), dummy)) select_record_type;
+      typedef sqlite::buffered::input_query_by_keys_base<
+        select_record_type,
+        parameters_type,
+        sqlite::default_value_access_policy> select_query_type;
+
+      std::string query_prefix_str = "SELECT `id`";
+      for (auto &f : parameter_key_fields_) {
+        query_prefix_str += ", `" + f + "`";
+      }
+      query_prefix_str += " FROM `" + parameters_table_name_ + "` WHERE ";
+
+      select_query_type select(db_, query_prefix_str, parameter_key_fields_);
+      for (auto &f : all_features_) {
+        if (f->parameters_id() == 0) {
+          select.add_key(*(f->parameters()));
+        }
+      }
+      for (auto r : select) {
+        auto found = find_by_parameters(sqlite::tuple_tail(r));
+        if (found != nullptr) {
+          found->parameters_id() = std::get<0>(r);
+        }
+      }
+    }
+
+    void create_parameter_ids() {
+      typedef ::sqlite::buffered::insert_query_base<parameters_type,
+                                                    ::sqlite::default_value_access_policy> insert_type;
+      insert_type insert(db_, parameters_table_name_, parameter_key_fields_);
+      for (auto &f : all_features_) {
+        if (f->parameters_id() == 0) {
+          insert.push_back(*(f->parameters()));
+        }
+      }
+      insert.flush();
+    }
+
+  private:
+    std::set<feature_type_ptr> all_features_;
+    sqlite::database::type_ptr db_;
+    std::string parameters_table_name_;
+    std::vector<std::string> parameter_key_fields_;
+  };
+
+
+}
+
