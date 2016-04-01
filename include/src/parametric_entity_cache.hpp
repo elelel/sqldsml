@@ -123,10 +123,17 @@ namespace sqldsml{
       return all_entities_.end();
     }
 
+    size_t size() {
+      return all_entities_.size();
+    }
+
+    void clear() {
+      all_entities_.clear();
+    }
+
     parametric_entity_container_type& all_entities() {
       return all_entities_;
     }
-
 
     void load_parameter_ids() {
       const parameters_type dummy;
