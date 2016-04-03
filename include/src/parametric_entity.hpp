@@ -14,8 +14,8 @@ namespace sqldsml {
     typedef std::shared_ptr<type> type_ptr;
     typedef parameters_t parameters_type;
     typedef std::shared_ptr<parameters_type> parameters_type_ptr;
-    typedef int64_t id_type;
-    typedef int64_t parameters_id_type;
+    typedef std::tuple<int64_t> id_type;
+    typedef std::tuple<int64_t> parameters_id_type;
 
     parametric_entity(const parameters_type_ptr& parameters) :
       id_(id_type()),

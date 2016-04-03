@@ -112,8 +112,9 @@ TEST_F(SqldsmlTest, SaveLoadParameterIds) {
   auto count_half = count_parameter_records();
   ASSERT_EQ(count_half, parameter_instances.size() / 2);
   my_int_feature_cache.load_parameter_ids();
+  my_int_feature::parameters_id_type null;
   for (auto &f : my_int_feature_cache.all_entities()) {
-    ASSERT_NE(f->parameters_id(), 0);
+    ASSERT_NE(f->parameters_id(), null);
   }
   
   my_int_feature_cache.create_parameter_ids();
@@ -154,10 +155,10 @@ TEST_F(SqldsmlTest, SaveAndLoadFeatureIds) {
   my_int_feature_cache.create_ids();
   my_int_feature_cache.load_ids();
 
+  my_int_feature::id_type null_id;
+  my_int_feature::parameters_id_type null_parameters_id;
   for (auto &f : my_int_feature_cache.all_entities()) {
-    ASSERT_NE(f->parameters_id(), 0);
-    ASSERT_NE(f->id(), 0);
+    ASSERT_NE(f->parameters_id(), null_id);
+    ASSERT_NE(f->id(), null_parameters_id);
   }
-  
-  
 }

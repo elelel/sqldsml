@@ -92,7 +92,7 @@ namespace sqldsml{
       }
     }
 
-    parametric_entity_type_ptr find_by_parameters_id(const int64_t parameters_id) const {
+    parametric_entity_type_ptr find_by_parameters_id(const parameters_id_type& parameters_id) const {
       auto found = std::find_if(all_entities_.begin(),
 				all_entities_.end(), [parameters_id](const parametric_entity_type_ptr& f) {
                                   return parameters_id == f->parameters_id();
@@ -138,7 +138,7 @@ namespace sqldsml{
     }
 
     void load_parameter_ids() {
-      typedef decltype(std::tuple_cat(std::tuple<id_type>(), parameters_type())) select_record_type;
+      typedef decltype(std::tuple_cat(parameters_id_type(), parameters_type())) select_record_type;
       typedef sqlite::buffered::input_query_by_keys_base<
         select_record_type,
         parameters_type,
@@ -192,12 +192,12 @@ namespace sqldsml{
       for (auto &f : all_entities_) {
         if ((f->id() == id_type()) &&
             (f->parameters_id() != parameters_id_type())) {
-          select.add_key(std::tuple<int64_t>(f->parameters_id()));
-          SQLDSML_HPP_LOG(std::string("parametric_entity_cache::load_ids add key ") + std::to_string(f->parameters_id()));
+          select.add_key(f->parameters_id());
+          //  SQLDSML_HPP_LOG(std::string("parametric_entity_cache::load_ids add key ") + std::to_string(f->parameters_id()));
         }
       }
       for (auto r : select) {
-        auto found = find_by_parameters_id(std::get<1>(r));
+        auto found = find_by_parameters_id(parameters_id_type(std::get<1>(r)));
         if (found != nullptr) {
           SQLDSML_HPP_LOG(std::string("parametric_entity_cache::load_ids got requested record"));
           found->id() = id_type(std::get<0>(r));
