@@ -20,6 +20,8 @@ namespace sqldsml{
     typedef typename parametric_entity_type::parameters_type parameters_type;
     typedef typename parametric_entity_type::parameters_type_ptr parameters_type_ptr;
     typedef std::set<parametric_entity_type_ptr> parametric_entity_container_type;
+    typedef typename parametric_entity_type::id_type id_type;
+    typedef typename parametric_entity_type::parameters_id_type parameters_id_type;
 
     template <typename parameter_key_fields_container_t>
     parametric_entity_cache(sqlite::database::type_ptr db,
@@ -151,14 +153,14 @@ namespace sqldsml{
 
       select_query_type select(db_, query_prefix_str, parameter_key_fields_);
       for (auto &f : all_entities_) {
-        if (f->parameters_id() == 0) {
+        if (f->parameters_id() == parameters_id_type()) {
           select.add_key(*(f->parameters()));
         }
       }
       for (auto r : select) {
         auto found = find_by_parameters(sqlite::tuple_tail(r));
         if (found != nullptr) {
-          found->parameters_id() = std::get<0>(r);
+          found->parameters_id() = parameters_id_type(std::get<0>(r));
         }
       }
     }
@@ -168,7 +170,7 @@ namespace sqldsml{
                                                     ::sqlite::default_value_access_policy> insert_type;
       insert_type insert(db_, parameters_table_name_, parameter_key_fields_);
       for (auto &f : all_entities_) {
-        if (f->parameters_id() == 0) {
+        if (f->parameters_id() == parameters_id_type()) {
           insert.push_back(*(f->parameters()));
         }
       }
@@ -189,7 +191,8 @@ namespace sqldsml{
       const std::vector<std::string> search_fields{"parameters_id"};
       select_query_type select(db_, query_prefix_str, search_fields);
       for (auto &f : all_entities_) {
-        if ((f->id() == 0) && (f->parameters_id() != 0)) {
+        if ((f->id() == id_type()) &&
+            (f->parameters_id() != parameters_id_type())) {
           select.add_key(std::tuple<int64_t>(f->parameters_id()));
           SQLDSML_HPP_LOG(std::string("parametric_entity_cache::load_ids add key ") + std::to_string(f->parameters_id()));
         }
@@ -198,7 +201,7 @@ namespace sqldsml{
         auto found = find_by_parameters_id(std::get<1>(r));
         if (found != nullptr) {
           SQLDSML_HPP_LOG(std::string("parametric_entity_cache::load_ids got requested record"));
-          found->id() = std::get<0>(r);
+          found->id() = id_type(std::get<0>(r));
         } else {
           SQLDSML_HPP_LOG(std::string("parametric_entity_cache::load_ids error - got not requested record"));
         }
@@ -210,7 +213,8 @@ namespace sqldsml{
                                                     ::sqlite::default_value_access_policy> insert_type;
       insert_type insert(db_, table_name_, std::vector<std::string>{"parameters_id"});
       for (auto &f : all_entities_) {
-        if ((f->id() == 0) && (f->parameters_id() != 0)) {
+        if ((f->id() == id_type()) &&
+            (f->parameters_id() != parameters_id_type())) {
           insert.push_back(std::tuple<int64_t>(f->parameters_id()));
         }
       }

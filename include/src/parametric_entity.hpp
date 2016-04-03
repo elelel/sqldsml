@@ -18,8 +18,8 @@ namespace sqldsml {
     typedef int64_t parameters_id_type;
 
     parametric_entity(const parameters_type_ptr& parameters) :
-      id_(0),
-      parameters_id_(0),
+      id_(id_type()),
+      parameters_id_(parameters_id_type()),
       parameters_(parameters) {
       SQLDSML_HPP_LOG("parametric_entity(const sqlite::database::type_ptr& db, const parameters_type_ptr& parameters)");
     }
