@@ -18,9 +18,9 @@ class SqldsmlTest : public ::testing::Test {
 protected:
 
   class my_int_feature : public
-  ::sqldsml::feature<my_int_feature, std::tuple<int64_t>> {
+  ::sqldsml::feature<std::tuple<int64_t>> {
   public:
-    using ::sqldsml::feature<my_int_feature, std::tuple<int64_t>>::feature;
+    using ::sqldsml::feature<std::tuple<int64_t>>::feature;
     typedef my_int_feature type;
     typedef std::shared_ptr<type> type_ptr;
 

@@ -7,15 +7,15 @@
 #include "logging.hpp"
 
 namespace sqldsml {
-  template <typename derived_t, typename parameters_t>
+  template <typename parameters_t>
   class parametric_entity {
   public:
-    typedef parametric_entity<derived_t, parameters_t> type;
+    typedef parametric_entity<parameters_t> type;
     typedef std::shared_ptr<type> type_ptr;
-    typedef derived_t derived_type;
-    typedef std::shared_ptr<derived_type> derived_type_ptr;
     typedef parameters_t parameters_type;
     typedef std::shared_ptr<parameters_type> parameters_type_ptr;
+    typedef int64_t id_type;
+    typedef int64_t parameters_id_type;
 
     parametric_entity(const parameters_type_ptr& parameters) :
       id_(0),
@@ -58,11 +58,11 @@ namespace sqldsml {
       return *this;
     }
     
-    int64_t& id() {
+    id_type& id() {
       return id_;
     }
     
-    int64_t& parameters_id() {
+    parameters_id_type& parameters_id() {
       return parameters_id_;
     }
     
@@ -71,8 +71,8 @@ namespace sqldsml {
     }
 
   protected:
-    int64_t id_;
-    int64_t parameters_id_;
+    id_type id_;
+    parameters_id_type parameters_id_;
     parameters_type_ptr parameters_;
   };
 }
