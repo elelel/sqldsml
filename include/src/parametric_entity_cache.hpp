@@ -177,8 +177,7 @@ namespace sqldsml{
     }
 
     void load_ids() {
-      const parameters_type dummy;
-      typedef std::tuple<int64_t, int64_t> select_record_type;
+      typedef decltype(std::tuple_cat(id_type(), parameters_id_type())) select_record_type;
       typedef sqlite::buffered::input_query_by_keys_base<
         select_record_type,
         parameters_type,
