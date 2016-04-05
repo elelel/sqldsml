@@ -18,9 +18,9 @@ class SqldsmlTest : public ::testing::Test {
 protected:
 
   class my_int_feature : public
-  ::sqldsml::feature<std::tuple<int64_t>> {
+  ::sqldsml::relational_feature<std::tuple<int64_t>> {
   public:
-    using ::sqldsml::feature<std::tuple<int64_t>>::feature;
+    using ::sqldsml::relational_feature<std::tuple<int64_t>>::relational_feature;
     typedef my_int_feature type;
     typedef std::shared_ptr<type> type_ptr;
 
@@ -30,9 +30,9 @@ protected:
   };
 
   class my_int_sample : public
-  ::sqldsml::sample<std::tuple<int64_t>> {
+  ::sqldsml::relational_sample<std::tuple<int64_t>> {
   public:
-    using ::sqldsml::sample<std::tuple<int64_t>>::sample;
+    using ::sqldsml::relational_sample<std::tuple<int64_t>>::relational_sample;
     typedef my_int_sample type;
     typedef std::shared_ptr<type> type_ptr;
   };
@@ -101,7 +101,7 @@ protected:
 };
 
 TEST_F(SqldsmlTest, ConstructAndCache) {
-  ::sqldsml::feature_cache<my_int_feature> my_int_feature_cache(nullptr, "", "", std::vector<std::string>{""});
+  ::sqldsml::relational_feature_cache<my_int_feature> my_int_feature_cache(nullptr, "", "", std::vector<std::string>{""});
   typename my_int_feature::parameters_type_ptr param(new my_int_feature::parameters_type(123));
   typename my_int_feature::parameters_type_ptr param_copy(new my_int_feature::parameters_type(123));
   auto f = my_int_feature_cache.add(my_int_feature(param));
@@ -114,7 +114,7 @@ TEST_F(SqldsmlTest, ConstructAndCache) {
     ASSERT_NE(f.get(), nullptr);
   }
 }
-/*
+
 TEST_F(SqldsmlTest, SaveLoadParameterIds) {
   // Instances of parameters to be converted to distinct features
   const size_t max_distinct_params = 10000;
@@ -127,7 +127,7 @@ TEST_F(SqldsmlTest, SaveLoadParameterIds) {
   create_parameters_table();
   
   std::vector<std::string> param_fields{"param"};
-  sqldsml::feature_cache<my_int_feature> my_int_feature_cache(db, "", parameters_table_name, param_fields);
+  sqldsml::relational_feature_cache<my_int_feature> my_int_feature_cache(db, "", parameters_table_name, param_fields);
   // Add half of the parameters
   for (int i = 0; i < parameter_instances.size() / 2; ++i) {
     my_int_feature f(parameter_instances[i]);
@@ -170,7 +170,7 @@ TEST_F(SqldsmlTest, SaveAndLoadFeatureIds) {
   create_parameters_table();
   create_feature_table();
   std::vector<std::string> param_fields{"param"};
-  sqldsml::feature_cache<my_int_feature> my_int_feature_cache(db, feature_table_name, parameters_table_name, param_fields);
+  sqldsml::relational_feature_cache<my_int_feature> my_int_feature_cache(db, feature_table_name, parameters_table_name, param_fields);
   
   for (int i = 0; i < parameter_instances.size(); ++i) {
     my_int_feature f(parameter_instances[i]);
@@ -188,7 +188,7 @@ TEST_F(SqldsmlTest, SaveAndLoadFeatureIds) {
     ASSERT_NE(f->id(), null_parameters_id);
   }
 }
-*/
+
 TEST_F(SqldsmlTest, CreateSamplesAndLinks) {
   const size_t max_samples = 3000;
   const size_t max_features = 3000;
@@ -222,8 +222,8 @@ TEST_F(SqldsmlTest, CreateSamplesAndLinks) {
   create_sample_table();
   
   std::vector<std::string> param_fields{"param"};
-  sqldsml::feature_cache<my_int_feature> feature_cache(db, feature_table_name, parameters_table_name, param_fields);
-  sqldsml::sample_cache<my_int_sample> sample_cache(db, sample_table_name, sample_int_to_id_table_name, param_fields);
+  sqldsml::relational_feature_cache<my_int_feature> feature_cache(db, feature_table_name, parameters_table_name, param_fields);
+  sqldsml::relational_sample_cache<my_int_sample> sample_cache(db, sample_table_name, sample_int_to_id_table_name, param_fields);
 
   auto flush = [&feature_cache, &sample_cache] () {
       feature_cache.load_parameter_ids();
