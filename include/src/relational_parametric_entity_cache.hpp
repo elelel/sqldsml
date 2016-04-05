@@ -207,13 +207,13 @@ namespace sqldsml{
     }
 
     void create_ids() {
-      typedef ::sqlite::buffered::insert_query_base<std::tuple<int64_t>,
+      typedef ::sqlite::buffered::insert_query_base<parameters_id_type,
                                                     ::sqlite::default_value_access_policy> insert_type;
       insert_type insert(db_, table_name_, std::vector<std::string>{"parameters_id"});
       for (auto &f : all_entities_) {
         if ((f->id() == id_type()) &&
             (f->parameters_id() != parameters_id_type())) {
-          insert.push_back(std::tuple<int64_t>(f->parameters_id()));
+          insert.push_back(parameters_id_type(f->parameters_id()));
         }
       }
       insert.flush();

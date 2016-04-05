@@ -2,8 +2,6 @@
 
 #include <tuple>
 
-#include <sqlite>
-
 #include "logging.hpp"
 
 namespace sqldsml {
@@ -21,7 +19,7 @@ namespace sqldsml {
       id_(id_type()),
       parameters_id_(parameters_id_type()),
       parameters_(parameters) {
-      SQLDSML_HPP_LOG("relational_parametric_entity(const sqlite::database::type_ptr& db, const parameters_type_ptr& parameters)");
+      SQLDSML_HPP_LOG("relational_parametric_entity(const parameters_type_ptr& parameters)");
     }
 
     relational_parametric_entity(const relational_parametric_entity& other) :
