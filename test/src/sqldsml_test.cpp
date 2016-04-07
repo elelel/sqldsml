@@ -45,10 +45,10 @@ protected:
   }
 
   void create_sample_table() {
-    sqlite::query drop_table(db, "DROP TABLE IF EXISTS `" + feature_table_name + "`");
+    sqlite::query drop_table(db, "DROP TABLE IF EXISTS `" + sample_table_name + "`");
     drop_table.step();
     ASSERT_EQ(SQLITE_DONE, drop_table.result_code());
-    sqlite::query create_table(db, "CREATE TABLE `" + feature_table_name + "` \
+    sqlite::query create_table(db, "CREATE TABLE `" + sample_table_name + "` \
 (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `" + sample_parameters_field + "` INT NOT NULL)");
     create_table.step();
     ASSERT_EQ(SQLITE_DONE, create_table.result_code());
@@ -69,8 +69,8 @@ protected:
 };
 
 TEST_F(SqldsmlTest, CreateSamplesAndLinks) {
-  const size_t max_samples = 3000;
-  const size_t max_features = 3000;
+  const size_t max_samples = 2000;
+  const size_t max_features = 2000;
 
   typedef std::vector<double> raw_sample_type;
 
@@ -104,13 +104,16 @@ TEST_F(SqldsmlTest, CreateSamplesAndLinks) {
                                                     std::vector<std::string>{sample_parameters_field});
 
   auto flush = [&feature_cache, &sample_cache] () {
-      feature_cache.load_ids();
-      feature_cache.create_ids();
-      feature_cache.load_ids();
+    std::cout << "Flushing\n";
+    feature_cache.load_ids();
 
-      sample_cache.load_ids();
-      sample_cache.create_ids();
-      sample_cache.load_ids();
+    
+    feature_cache.create_ids();
+    feature_cache.load_ids();
+
+    sample_cache.load_ids();
+    sample_cache.create_ids();
+    sample_cache.load_ids();
   };
   
   // Pretend we are scanning a dataset to generate features
