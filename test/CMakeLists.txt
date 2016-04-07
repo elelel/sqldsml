@@ -19,7 +19,10 @@ include_directories("${SQLITE_HPP_PATH}/include")
 
 include_directories(${GTEST_INCLUDE_DIRES})
 include_directories("../include")
+add_executable(relational_sqldsml_test src/relational_sqldsml_test.cpp)
 add_executable(sqldsml_test src/sqldsml_test.cpp)
+target_link_libraries(relational_sqldsml_test ${GTEST_BOTH_LIBRARIES} ${LINUX_LIBS} sqlite3 pthread)
 target_link_libraries(sqldsml_test ${GTEST_BOTH_LIBRARIES} ${LINUX_LIBS} sqlite3 pthread)
+add_test(RelationalSqldsmlTests relational_sqldsml_test)
 add_test(SqldsmlTests sqldsml_test)
 
