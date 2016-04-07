@@ -1,5 +1,4 @@
 #include "src/logging.hpp"
 #include "src/feature.hpp"
 #include "src/sample.hpp"
-#include "src/parametric_link.hpp"
-#include "src/parametric_link_cache.hpp"
+#include "src/value.hpp"

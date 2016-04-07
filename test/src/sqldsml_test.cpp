@@ -27,19 +27,29 @@ protected:
   };
 
   class my_int_sample : public
-  ::sqldsml::sample<std::tuple<int64_t>> {
+  ::sqldsml::sample<std::tuple<int64_t>,
+                    std::tuple<int64_t>> {
   public:
-    using ::sqldsml::sample<std::tuple<int64_t>>::sample;
+    using ::sqldsml::sample<std::tuple<int64_t>,
+                            std::tuple<int64_t>>::sample;
     typedef my_int_sample type;
     typedef std::shared_ptr<type> type_ptr;
   };
-  
+
+  class my_real_value : public
+  ::sqldsml::value<my_int_sample, my_int_feature, double> {
+  public:
+    using ::sqldsml::value<my_int_sample, my_int_feature, double>::value;
+    typedef my_real_value type;
+    typedef std::shared_ptr<type> type_ptr;
+  };
+
   void create_feature_table() {
     sqlite::query drop_table(db, "DROP TABLE IF EXISTS `" + feature_table_name + "`");
     drop_table.step();
     ASSERT_EQ(SQLITE_DONE, drop_table.result_code());
     sqlite::query create_table(db, "CREATE TABLE `" + feature_table_name + "` \
-(`id` INTEGER PRIMARY KEY AUTOINCREMENT, `" + feature_parameters_field +"` INT NOT NULL)");
+(`id` INTEGER PRIMARY KEY AUTOINCREMENT, `" + feature_parameter_fields[0] +"` INTEGER NOT NULL)");
     create_table.step();
     ASSERT_EQ(SQLITE_DONE, create_table.result_code());
   }
@@ -49,7 +59,18 @@ protected:
     drop_table.step();
     ASSERT_EQ(SQLITE_DONE, drop_table.result_code());
     sqlite::query create_table(db, "CREATE TABLE `" + sample_table_name + "` \
-(`id` INTEGER PRIMARY KEY AUTOINCREMENT, `" + sample_parameters_field + "` INT NOT NULL)");
+(`id` INTEGER PRIMARY KEY AUTOINCREMENT, `" + sample_parameter_fields[0] + "` INTEGER NOT NULL)");
+    create_table.step();
+    ASSERT_EQ(SQLITE_DONE, create_table.result_code());
+  }
+
+  void create_value_table() {
+    sqlite::query drop_table(db, "DROP TABLE IF EXISTS `" + value_table_name + "`");
+    drop_table.step();
+    ASSERT_EQ(SQLITE_DONE, drop_table.result_code());
+    sqlite::query create_table(db, "CREATE TABLE `" + value_table_name + "` \
+(`sample_id` INTEGER, `feature_id` INTEGER, `" + value_parameter_fields[0] + "` INTEGER NOT NULL, \
+PRIMARY KEY(sample_id, feature_id) )");
     create_table.step();
     ASSERT_EQ(SQLITE_DONE, create_table.result_code());
   }
@@ -63,14 +84,20 @@ protected:
 
   typename ::sqlite::database::type_ptr db;
   std::string feature_table_name = "test_features";
-  std::string feature_parameters_field = "feature_index";
+  std::vector<std::string> feature_id_fields = {"id"};
+  std::vector<std::string> feature_parameter_fields = {"feature_index"};
   std::string sample_table_name = "test_samples";
-  std::string sample_parameters_field = "sample_natural_id";
+  std::vector<std::string> sample_id_fields = {"id"};
+  std::vector<std::string> sample_parameter_fields = {"sample_natural_id"};
+  std::string value_table_name = "test_values";
+  std::vector<std::string> value_id_fields = {"sample_id", "feature_id"};
+  std::vector<std::string> value_parameter_fields = {"value"};
 };
 
 TEST_F(SqldsmlTest, CreateSamplesAndLinks) {
-  const size_t max_samples = 2000;
-  const size_t max_features = 2000;
+  const size_t max_samples = 200;
+  const size_t max_features = 200;
+  const size_t flush_every = 53;
 
   typedef std::vector<double> raw_sample_type;
 
@@ -97,36 +124,49 @@ TEST_F(SqldsmlTest, CreateSamplesAndLinks) {
     
   create_feature_table();
   create_sample_table();
+  create_value_table();
   
   sqldsml::feature_cache<my_int_feature> feature_cache(db, feature_table_name,
-                                                       std::vector<std::string>{feature_parameters_field});
+                                                       feature_id_fields,
+                                                       feature_parameter_fields);
   sqldsml::sample_cache<my_int_sample> sample_cache(db, sample_table_name,
-                                                    std::vector<std::string>{sample_parameters_field});
-
+                                                    sample_id_fields,
+                                                    sample_parameter_fields);
+  
+  sqldsml::value_cache<my_real_value> value_cache(db, value_table_name,
+                                                  value_id_fields,
+                                                  value_parameter_fields);
+  
   auto flush = [&feature_cache, &sample_cache] () {
     std::cout << "Flushing\n";
     feature_cache.load_ids();
-
-    
     feature_cache.create_ids();
     feature_cache.load_ids();
+    for (auto e : feature_cache.all_entities()) {
+      ASSERT_NE(std::get<0>(e->id()), 0);
+    }
 
+    SQLDSML_HPP_LOG(std::string("preliminary load"));
     sample_cache.load_ids();
+    SQLDSML_HPP_LOG(std::string("create"));
     sample_cache.create_ids();
+    SQLDSML_HPP_LOG(std::string("load"));
     sample_cache.load_ids();
   };
   
   // Pretend we are scanning a dataset to generate features
   for (int k = 0; k < max_samples; ++k) {
-    std::cout << "Sample " << std::to_string(k) << " \n";
+    SQLDSML_HPP_LOG(std::string("Adding sample ") +  std::to_string(k));
     auto s = sample_cache.add(my_int_sample(std::tuple<int64_t>(k)));
     for (int i = 0; i < max_features; ++i) {
       if (raw_dataset[k][i] != 0) {
+        SQLDSML_HPP_LOG(std::string("Adding feature ") +  std::to_string(i));
         auto f = feature_cache.add(my_int_feature(std::tuple<int64_t>(i)));
+        
       }
     }
 
-    if (k % 600 == 0) {
+    if ((k + 1) % flush_every == 0) {
       flush();
       sample_cache.clear();
     }
@@ -136,5 +176,3 @@ TEST_F(SqldsmlTest, CreateSamplesAndLinks) {
   std::cout << "Flushed\n";
 }
 
-
-  

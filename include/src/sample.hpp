@@ -12,9 +12,9 @@
 
 
 namespace sqldsml {
-  template <typename parameters_t>
-  class sample : public parametric_entity< parameters_t> {
-    using parametric_entity<parameters_t>::parametric_entity;
+  template <typename id_t, typename parameters_t>
+  class sample : public parametric_entity<id_t, parameters_t> {
+    using parametric_entity<id_t, parameters_t>::parametric_entity;
   };
 
   template <typename sample_t>

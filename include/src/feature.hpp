@@ -12,8 +12,8 @@
 
 namespace sqldsml {
   template <typename parameters_t>
-  class feature : public parametric_entity<parameters_t> {
-    using parametric_entity<parameters_t>::parametric_entity;
+  class feature : public parametric_entity<std::tuple<int64_t>, parameters_t> {
+    using parametric_entity<std::tuple<int64_t>, parameters_t>::parametric_entity;
   };
 
   template <typename feature_t>
