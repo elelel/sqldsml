@@ -37,9 +37,9 @@ protected:
   };
 
   class my_real_value : public
-  ::sqldsml::value<my_int_sample, my_int_feature, double> {
+  ::sqldsml::value<my_int_sample, my_int_feature, std::tuple<double>> {
   public:
-    using ::sqldsml::value<my_int_sample, my_int_feature, double>::value;
+    using ::sqldsml::value<my_int_sample, my_int_feature, std::tuple<double>>::value;
     typedef my_real_value type;
     typedef std::shared_ptr<type> type_ptr;
   };
@@ -69,7 +69,7 @@ protected:
     drop_table.step();
     ASSERT_EQ(SQLITE_DONE, drop_table.result_code());
     sqlite::query create_table(db, "CREATE TABLE `" + value_table_name + "` \
-(`sample_id` INTEGER, `feature_id` INTEGER, `" + value_parameter_fields[0] + "` INTEGER NOT NULL, \
+(`sample_id` INTEGER, `feature_id` INTEGER, `" + value_parameter_fields[0] + "` FLOAT NOT NULL, \
 PRIMARY KEY(sample_id, feature_id) )");
     create_table.step();
     ASSERT_EQ(SQLITE_DONE, create_table.result_code());
@@ -137,7 +137,7 @@ TEST_F(SqldsmlTest, CreateSamplesAndLinks) {
                                                   value_id_fields,
                                                   value_parameter_fields);
   
-  auto flush = [&feature_cache, &sample_cache] () {
+  auto flush = [&feature_cache, &sample_cache, &value_cache] () {
     std::cout << "Flushing\n";
     feature_cache.load_ids();
     feature_cache.create_ids();
@@ -152,6 +152,8 @@ TEST_F(SqldsmlTest, CreateSamplesAndLinks) {
     sample_cache.create_ids();
     SQLDSML_HPP_LOG(std::string("load"));
     sample_cache.load_ids();
+
+    value_cache.create_links();
   };
   
   // Pretend we are scanning a dataset to generate features
@@ -160,15 +162,18 @@ TEST_F(SqldsmlTest, CreateSamplesAndLinks) {
     auto s = sample_cache.add(my_int_sample(std::tuple<int64_t>(k)));
     for (int i = 0; i < max_features; ++i) {
       if (raw_dataset[k][i] != 0) {
-        SQLDSML_HPP_LOG(std::string("Adding feature ") +  std::to_string(i));
         auto f = feature_cache.add(my_int_feature(std::tuple<int64_t>(i)));
-        
+        my_real_value val(s, f, std::tuple<double>(raw_dataset[k][i]));
+        ASSERT_NE(std::get<0>(val.parameters()), 0);
+        SQLDSML_HPP_LOG(std::string("Adding feature ") +  std::to_string(i));
+        auto v = value_cache.add(val);
       }
     }
 
     if ((k + 1) % flush_every == 0) {
       flush();
       sample_cache.clear();
+      value_cache.clear();
     }
   }
   std::cout << "End, flushing\n";
